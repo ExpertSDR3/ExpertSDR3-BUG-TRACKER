@@ -7,7 +7,7 @@
 ## FAQ
 [BUG-TRACKER](https://github.com/ValeraESDR3/ExpertSDR3-BUGTRACKER/issues)
 
-Перед публикацией бага проверьте, используя поиск, что об этой проблеме уже не писали.
+Перед публикацией бага проверьте, используя поиск, что об этой проблеме еще не писали.
 
 Before publishing the bug, check using the search that this problem has not been written about.
 
