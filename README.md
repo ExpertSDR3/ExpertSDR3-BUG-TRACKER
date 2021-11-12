@@ -1,7 +1,6 @@
 # ExpertSDR3-BUGTRACKER
   <h3 align="center">Welcome to Expert Electronics software bug tracker</h3>
   <p align="center">  
-       <br />
     <a href="#bug-submission-manual">Bug submission manual</a>
     ·    
     <a href="https://github.com/VK6NX/EE-Software-TestLounge/issues">Submit Bug Report</a>
