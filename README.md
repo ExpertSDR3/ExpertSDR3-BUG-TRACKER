@@ -1,4 +1,6 @@
 # ExpertSDR3-BUGTRACKER
+  <h3 align="center">Welcome to Expert Electronics software bug tracker</h3>
+  <p align="center">  
 
 ## FAQ
 [BUG-TRACKER](https://github.com/ExpertSDR3/ExpertSDR3-BUG-TRACKER/issues)
@@ -10,13 +12,7 @@ Prior submitting a bug, check that this bug has not been published earlier.
 <p align="center">
   <img alt="VS Code in action" src="https://i.imgur.com/xgD6L43.gif">
 </p>
-
-  <h3 align="center">Welcome to Expert Electronics software bug tracker</h3>
-  <p align="center">  
-
-  <p align="center">
-    Alpha/Beta ESDR test community portal <br />
-    <br />
+     <br />
     <a href="#bug-submission-manual">Bug submission manual</a>
     ·    
     <a href="https://github.com/VK6NX/EE-Software-TestLounge/issues">Submit Bug Report</a>
