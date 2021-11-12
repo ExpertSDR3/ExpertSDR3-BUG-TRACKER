@@ -9,7 +9,7 @@
 
 Перед публикацией бага проверьте, используя поиск, что об этой проблеме еще не писали.
 
-Before publishing the bug, check using the search that this problem has not been written about.
+Prior submitting a bug, check that this bug has not been published earlier.
 
 <p align="center">
   <img alt="VS Code in action" src="https://i.imgur.com/xgD6L43.gif">
