@@ -1,9 +1,5 @@
 # ExpertSDR3-BUGTRACKER
 
-## Контакты Contacts
-* info@sunsdr.com
-* https://eesdr.com
-
 ## FAQ
 [BUG-TRACKER](https://github.com/ExpertSDR3/ExpertSDR3-BUG-TRACKER/issues)
 
@@ -14,3 +10,23 @@ Prior submitting a bug, check that this bug has not been published earlier.
 <p align="center">
   <img alt="VS Code in action" src="https://i.imgur.com/xgD6L43.gif">
 </p>
+
+  <h3 align="center">Welcome to Expert Electronics software bug tracker</h3>
+  <p align="center">  
+
+  <p align="center">
+    Alpha/Beta ESDR test community portal <br />
+    <br />
+    <a href="#bug-submission-manual">Bug submission manual</a>
+    ·    
+    <a href="https://github.com/VK6NX/EE-Software-TestLounge/issues">Submit Bug Report</a>
+    ·
+    <a href="https://eesdr.com/index.php?option=com_acym&ctrl=fronturl&action=acymailing_frontrouter&task=click&urlid=47&userid=11&mailid=75" target="_blank">Current software in test</a>
+    ·
+    <a href="https://eesdr.com/en/software-en/expertsdr3-en" target="_blank">Latest public release</a>
+  </p>
+</p>
+
+## Контакты Contacts
+* info@sunsdr.com
+* https://eesdr.com
