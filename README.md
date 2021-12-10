@@ -3,7 +3,7 @@
   <p align="center">  
     <a href="#bug-submission-manual">Bug submission manual</a>
     ·    
-    <a href="https://github.com/VK6NX/EE-Software-TestLounge/issues">Submit Bug Report</a>
+    <a href="https://github.com/ExpertSDR3/ExpertSDR3-BUG-TRACKER/issues">Submit Bug Report</a>
     ·
     <a href="https://eesdr.com/index.php?option=com_acym&ctrl=fronturl&action=acymailing_frontrouter&task=click&urlid=47&userid=11&mailid=75" target="_blank">Current software in test</a>
     ·
