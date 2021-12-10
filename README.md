@@ -1,7 +1,7 @@
 # ExpertSDR3-BUGTRACKER
   <h3 align="center">Welcome to Expert Electronics software bug tracker</h3>
   <p align="center">  
-    <a href="#https://eesdr.com/en/software-en/bug-report">Bug submission manual</a>
+    <a href="https://eesdr.com/en/software-en/bug-report">Bug submission manual</a>
     ·    
     <a href="https://github.com/ExpertSDR3/ExpertSDR3-BUG-TRACKER/issues">Submit Bug Report</a>
     ·
