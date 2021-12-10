@@ -5,7 +5,7 @@
     ·    
     <a href="https://github.com/ExpertSDR3/ExpertSDR3-BUG-TRACKER/issues">Submit Bug Report</a>
     ·
-    <a href="https://eesdr.com/index.php?option=com_acym&ctrl=fronturl&action=acymailing_frontrouter&task=click&urlid=47&userid=11&mailid=75" target="_blank">Current software in test</a>
+    <a href="https://drive.google.com/drive/folders/1rGdy8YXEh0bCr_uK3Wk544aozkT3y3uO?usp=sharing" target="_blank">Current software in test</a>
     ·
     <a href="https://eesdr.com/en/software-en/expertsdr3-en" target="_blank">Latest public release</a>
   </p>
