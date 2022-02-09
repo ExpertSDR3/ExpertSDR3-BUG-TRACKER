@@ -1,7 +1,7 @@
-# ExpertSDR3-BUGTRACKER
+# ExpertSDR3 Bug Tracker
   <h3 align="center">Welcome to Expert Electronics software bug tracker</h3>
   <p align="center">  
-    <a href="https://eesdr.com/en/software-en/bug-report">Bug submission manual</a>
+    <a href="#bug-submission-manual">Bug submission manual</a>
     ·    
     <a href="https://github.com/ExpertSDR3/ExpertSDR3-BUG-TRACKER/issues">Submit Bug Report</a>
     ·
@@ -11,12 +11,10 @@
   </p>
 </p>
 
-## FAQ
-[BUG-TRACKER](https://github.com/ExpertSDR3/ExpertSDR3-BUG-TRACKER/issues)
-
-Перед публикацией бага проверьте, используя поиск, что об этой проблеме еще не писали.
-
-Prior submitting a bug, check that this bug has not been published earlier.
+<!-- Manual -->
+## Bug submission Manual
+```diff
+! Read it. We mean it.
 
 <p align="center">
   <img alt="VS Code in action" src="https://i.imgur.com/xgD6L43.gif">
