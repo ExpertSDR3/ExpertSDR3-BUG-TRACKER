@@ -21,6 +21,7 @@
 
 3. Fill in the "Write" section. Please remember that no one is expecting you to be perfect since the start, however, there is good practice to look at examples. We recommend you to use the following template:
 <p>Тело отчета (секция Write). Мы понимаем, что сначала вы можете совершать ошибки в оформлении отчета, поэтому рекомендуем смотреть как это делают другие. За основу же можно взять следующий порядок оформления:
+  
 * Device and serial number / Модель радио и серийный номер
 * ExpertSDR3 version and build number / Версия и номер билда ExpertSDR3
 * OS: Windows 10/ macOS/ Linux Ubuntu - under which OS you have confirmed the issue / ОС: Windows 10/ macOS/ Linux Ubuntu - используя какую ОС вы столкнулись с ошибкой
