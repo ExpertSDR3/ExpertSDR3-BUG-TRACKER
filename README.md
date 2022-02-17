@@ -6,8 +6,7 @@
   <a href="#bug-submission-manual-ru">Как правильно сообщить об ошибке</a>
     ·
     <a href="https://github.com/ExpertSDR3/ExpertSDR3-BUG-TRACKER/issues">Submit Bug Report</a>
-    ·
-    <a href="https://drive.google.com/drive/folders/1zsu0w6YRt1kOTkfIVaQcRiMIat22ZNHe?usp=sharing" target="_blank">Current software in test</a>
+    
     ·
     <a href="https://eesdr.com/en/software-en/expertsdr3-en" target="_blank">Latest public release</a>
   </p>
