@@ -29,6 +29,11 @@
 
 4. Please note that adding info to the existing report (as the report progress) is important. If you found new or corrective information - please submit it ASAP. As usual, please keep it short, but as much descriptive as possible.
 
+5. Attach a backtrace.dump file to any report, it's located in the Settings folder.
+Windows: C:/Users/UserName/AppData/Local/Expert Electronics/ExpertSDR3
+Linux: /home/UserName/.config/Expert Electronics/ExpertSDR3
+Mac OSX: /Users/UserName/Library/Preferences/Expert Electronics/ExpertSDR3
+
 ## Bug submission Manual RU
 1. Прочтите список уже зарегистрированных ошибок. Очень важно избегать задвоений, поэтому пожалуйста, будьте внимательны к тому, что уже зарегистрировано. Если вы видите сообщение близкое по смыслу, но отличное в деталях от того, что хотите написать вы - свяжитесь с автором и уточните подробности. Лучше добавить дополнительную информацию в уже существующий отчет об ошибке, чем создавать новый.
 
@@ -45,7 +50,11 @@
 * Укажите последовательность действий для воспроизведения ошибки, если можете
 
 4. Помните, что Важно добавлять актуальную информацию в отчет об ошибке (по мере её решения). Если Вы обнаружили какую-то уточняющую информацию - пожалуйста сообщите о ней как можно скорее. Как всегда, пожалуйста будьте кратки, но как можно более полно.
-  
+
+5. Всегда прикладывайте файл backtrace.dump регистрируя новую ошибку, он расположен в папке Settings.
+Windows: C:/Users/UserName/AppData/Local/Expert Electronics/ExpertSDR3
+Linux: /home/UserName/.config/Expert Electronics/ExpertSDR3
+Mac OSX: /Users/UserName/Library/Preferences/Expert Electronics/ExpertSDR3
 <p align="center">
   <img alt="VS Code in action" src="https://i.imgur.com/xgD6L43.gif">
 </p>
