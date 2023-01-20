@@ -18,7 +18,7 @@
 3. Fill in the "Write" section. Please remember that no one is expecting you to be perfect since the start, however, there is good practice to look at examples. We recommend you to use the following template:
   
 * Device and serial number
-* ExpertSDR3 version and build number
+* ExpertSDR3 version, build number, firmware version
 * OS: Windows 10/ macOS/ Linux Ubuntu - under which OS you have confirmed the issue
 * Your PC parameters briefly
 * Description: full and most descriptive information about the bug/issue
@@ -40,7 +40,7 @@ Mac OSX: /Users/UserName/Library/Preferences/Expert Electronics/ExpertSDR3
 3. Тело отчета (секция Write). Мы понимаем, что сначала вы можете совершать ошибки в оформлении отчета, поэтому рекомендуем смотреть как это делают другие. За основу же можно взять следующий порядок оформления:
   
 * Модель радио и серийный номер
-* Версия и номер билда ExpertSDR3
+* Версия и номер билда ExpertSDR3, версия прошивки трансивера
 * ОС: Windows 10/ macOS/ Linux Ubuntu - используя какую ОС вы столкнулись с ошибкой
 * Кратко характеристики вашего ПК
 * Описание: максимально полная информация об ошибке
