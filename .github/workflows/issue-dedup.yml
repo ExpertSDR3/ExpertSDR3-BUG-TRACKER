@@ -40,6 +40,7 @@ jobs:
           python - << 'EOF'
           import os
           import sys
+          import json
           import requests
 
           token = os.environ["GITHUB_TOKEN"]
@@ -110,12 +111,14 @@ jobs:
           ai_headers = {
               "Authorization": f"Bearer {token}",
               "Content-Type": "application/json",
+              "Accept": "application/json",
               "User-Agent": "ExpertSDR3-Deduplicator"
           }
           ai_payload = {
               "model": "gpt-4o-mini",
               "messages": [{"role": "user", "content": prompt}],
-              "temperature": 0.1
+              "temperature": 0.1,
+              "stream": False
           }
 
           ai_res = requests.post(
@@ -128,7 +131,30 @@ jobs:
               print(f"Ошибка API GitHub Models ({ai_res.status_code}):\n{ai_res.text}")
               sys.exit(1)
 
-          answer = ai_res.json()["choices"][0]["message"]["content"].strip()
+          raw_text = ai_res.text.strip()
+          answer = ""
+
+          if "data:" in raw_text:
+              for line in raw_text.splitlines():
+                  line = line.strip()
+                  if line.startswith("data:") and not line.endswith("[DONE]"):
+                      try:
+                          payload = json.loads(line[5:].strip())
+                          choice = payload.get("choices", [{}])[0]
+                          delta = choice.get("delta", {}).get("content", "")
+                          msg = choice.get("message", {}).get("content", "")
+                          answer += (delta or msg)
+                      except Exception:
+                          pass
+              answer = answer.strip()
+          else:
+              try:
+                  data = json.loads(raw_text)
+                  answer = data["choices"][0]["message"]["content"].strip()
+              except Exception as e:
+                  print(f"Ошибка парсинга. Сырой ответ сервера:\n>>>{raw_text}<<<")
+                  sys.exit(1)
+
           print(f"Ответ ИИ:\n{answer}")
 
           # 4. Если найден дубликат
