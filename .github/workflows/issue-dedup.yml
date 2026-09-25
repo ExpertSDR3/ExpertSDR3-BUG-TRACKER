@@ -110,7 +110,7 @@ jobs:
               "temperature": 0.1
           }
 
-          # Запрос в актуальный эндпоинт GitHub Models
+          # Запрос в актуальный рабочий эндпоинт GitHub Models
           ai_res = requests.post(
               "https://models.github.ai/inference/chat/completions",
               headers=ai_headers,
