@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: 'Номер Issue для проверки (например: 12)'
+        description: 'Номер Issue для проверки (например: 1)'
         required: true
         type: string
 
@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.inputs.issue_number }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number || inputs.issue_number }}
   cancel-in-progress: true
 
 jobs:
@@ -27,9 +27,8 @@ jobs:
         uses: pelikhan/action-genai-issue-dedup@v0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_issue: ${{ github.event.issue.number || inputs.issue_number }}
           count: 50
           state: 'all'
           label_as_duplicate: true
           max_duplicates: 3
-        env:
-          INPUT_GITHUB_ISSUE: ${{ github.event.inputs.issue_number }}
