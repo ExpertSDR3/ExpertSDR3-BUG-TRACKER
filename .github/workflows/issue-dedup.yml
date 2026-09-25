@@ -107,7 +107,7 @@ jobs:
               "User-Agent": "GitHub-Action-Issue-Dedup"
           }
           ai_payload = {
-              "model": "gpt-4o-mini",
+              "model": "openai/gpt-4o-mini",
               "messages": [{"role": "user", "content": prompt}],
               "temperature": 0.1
           }
@@ -118,13 +118,21 @@ jobs:
               json=ai_payload
           )
 
-          print(f"Статус ответа GitHub Models: {ai_res.status_code}")
-          if ai_res.status_code != 200:
-              print(f"Ошибка ответа GitHub Models ({ai_res.status_code}):\n{ai_res.text}")
+          print(f"HTTP Status: {ai_res.status_code}")
+          print(f"Content-Type: {ai_res.headers.get('content-type')}")
+          print(f"Raw Response: >>>{ai_res.text}<<<")
+
+          if not ai_res.text.strip():
+              print("Ошибка: Тело ответа пустое.")
               sys.exit(1)
 
-          answer = ai_res.json()["choices"][0]["message"]["content"].strip()
-          print(f"Ответ ИИ:\n{answer}")
+          try:
+              data = ai_res.json()
+              answer = data["choices"][0]["message"]["content"].strip()
+              print(f"Ответ ИИ:\n{answer}")
+          except Exception as e:
+              print(f"Ошибка парсинга JSON: {e}")
+              sys.exit(1)
 
           # 4. Если дубликат — публикуем комментарий и метку
           if "DUPLICATE:" in answer:
