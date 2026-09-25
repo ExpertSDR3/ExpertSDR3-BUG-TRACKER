@@ -1,0 +1,27 @@
+name: AI Issue Deduplicator
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  models: read
+  issues: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  deduplicate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for duplicate issues
+        uses: pelikhan/action-genai-issue-dedup@v0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          count: 50
+          state: 'all'
+          label_as_duplicate: true
+          max_duplicates: 3
