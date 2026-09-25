@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: 'Номер Issue для проверки (например: 896)'
+        description: 'Номер Issue для проверки (например: 895)'
         required: true
         type: string
 
@@ -105,14 +105,14 @@ jobs:
               "Content-Type": "application/json"
           }
           ai_payload = {
-              "model": "gpt-4o-mini",
+              "model": "openai/gpt-4o-mini",
               "messages": [{"role": "user", "content": prompt}],
               "temperature": 0.1
           }
 
-          # Запрос во встроенный GitHub Models API
+          # Запрос в актуальный эндпоинт GitHub Models
           ai_res = requests.post(
-              "https://models.inference.ai.azure.com/chat/completions",
+              "https://models.github.ai/inference/chat/completions",
               headers=ai_headers,
               json=ai_payload
           )
