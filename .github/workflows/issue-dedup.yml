@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: 'Номер Issue для проверки (например: 1)'
+        description: 'Номер Issue для проверки (например: 896)'
         required: true
         type: string
 
@@ -23,12 +23,99 @@ jobs:
   deduplicate:
     runs-on: ubuntu-latest
     steps:
-      - name: Check for duplicate issues
-        uses: pelikhan/action-genai-issue-dedup@v0
+      - name: Deduplicate Issues with AI
+        uses: actions/github-script@v7
+        env:
+          TARGET_ISSUE: ${{ github.event.issue.number || inputs.issue_number }}
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          github_issue: ${{ github.event.issue.number || inputs.issue_number }}
-          count: 50
-          state: 'all'
-          label_as_duplicate: true
-          max_duplicates: 3
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const targetIssueNumber = parseInt(process.env.TARGET_ISSUE, 10);
+            if (!targetIssueNumber) {
+              core.setFailed("Номер задачи не передан.");
+              return;
+            }
+
+            // 1. Получаем целевую задачу
+            const { data: targetIssue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: targetIssueNumber,
+            });
+
+            console.log(`Проверка Issue #${targetIssue.number}: "${targetIssue.title}"`);
+
+            // 2. Получаем последние 50 задач репозитория для сравнения
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              per_page: 50,
+            });
+
+            const candidateList = issues
+              .filter(i => i.number !== targetIssueNumber && !i.pull_request)
+              .map(i => `#${i.number}: ${i.title}\n${(i.body || '').substring(0, 300)}`)
+              .join('\n---\n');
+
+            if (!candidateList.trim()) {
+              console.log("Нет других задач для сравнения.");
+              return;
+            }
+
+            // 3. Формируем запрос к модели
+            const prompt = `Ты — система модерации баг-трекера.
+            Проанализируй новую задачу и сравни её со списком существующих.
+            
+            ЦЕЛЕВАЯ ЗАДАЧА:
+            #${targetIssue.number}: ${targetIssue.title}
+            ${targetIssue.body || ''}
+            
+            СПИСОК ДРУГИХ ЗАДАЧ:
+            ${candidateList}
+            
+            Если целевая задача дублирует (описывает ту же аппаратную/программную ошибку или проблему) одну или несколько существующих задач, выведи строго в таком формате:
+            DUPLICATE: #НОМЕР (краткая причина)
+            
+            Если дубликатов нет, ответь ровно:
+            UNIQUE`;
+
+            // Запрос через GitHub Models REST endpoint
+            const fetch = (await import('node-fetch')).default;
+            const res = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${{ secrets.GITHUB_TOKEN }}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.1
+              })
+            });
+
+            const completion = await res.json();
+            const reply = completion.choices?.[0]?.message?.content?.trim();
+            console.log("Ответ модели:", reply);
+
+            // 4. Если обнаружен дубликат — комментируем и вешаем метку
+            if (reply && reply.includes("DUPLICATE:")) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: targetIssueNumber,
+                body: `🤖 **AI Deduplicator:**\n\n${reply}\n\nПожалуйста, ознакомьтесь с указанной задачей.`
+              });
+
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: targetIssueNumber,
+                  labels: ['duplicate']
+                });
+              } catch (e) {
+                console.log("Не удалось добавить метку duplicate (возможно, метка отсутствует):", e.message);
+              }
+            }
