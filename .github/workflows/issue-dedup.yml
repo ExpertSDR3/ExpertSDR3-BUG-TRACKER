@@ -3,6 +3,12 @@ name: AI Issue Deduplicator
 on:
   issues:
     types: [opened, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Номер Issue для проверки (например: 12)'
+        required: true
+        type: string
 
 permissions:
   models: read
@@ -10,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.inputs.issue_number }}
   cancel-in-progress: true
 
 jobs:
@@ -25,3 +31,5 @@ jobs:
           state: 'all'
           label_as_duplicate: true
           max_duplicates: 3
+        env:
+          INPUT_GITHUB_ISSUE: ${{ github.event.inputs.issue_number }}
