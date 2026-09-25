@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python
-        uses: setup-python@v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -47,7 +47,7 @@ jobs:
           target_num = os.environ.get("TARGET_ISSUE_NUM")
 
           if not target_num:
-              print("Номер Issue не задан.")
+              print("Ошибка: Номер Issue не задан.")
               sys.exit(1)
 
           gh_headers = {
@@ -55,7 +55,7 @@ jobs:
               "Accept": "application/vnd.github+json"
           }
 
-          # 1. Получаем проверяемый Issue
+          # 1. Загружаем целевой Issue
           issue_url = f"https://api.github.com/repos/{repo}/issues/{target_num}"
           r = requests.get(issue_url, headers=gh_headers)
           if r.status_code != 200:
@@ -63,17 +63,17 @@ jobs:
               sys.exit(1)
 
           target_issue = r.json()
-          print(f"Анализируем Issue #{target_num}: {target_issue.get('title')}")
+          print(f"Проверяем задачу #{target_num}: {target_issue.get('title')}")
 
-          # 2. Получаем список последних 50 задач для сравнения
+          # 2. Получаем список последних 50 задач репозитория
           list_url = f"https://api.github.com/repos/{repo}/issues?state=all&per_page=50"
           issues_list = requests.get(list_url, headers=gh_headers).json()
 
           candidates = []
           for item in issues_list:
               if str(item["number"]) != str(target_num) and "pull_request" not in item:
-                  body_preview = (item.get("body") or "")[:300].replace("\n", " ")
-                  candidates.append(f"#{item['number']}: {item['title']} | Контекст: {body_preview}")
+                  body_preview = (item.get("body") or "")[:250].replace("\n", " ")
+                  candidates.append(f"#{item['number']}: {item['title']} (Контекст: {body_preview})")
 
           if not candidates:
               print("Нет других задач для сравнения.")
@@ -83,20 +83,20 @@ jobs:
 
           # 3. Формируем запрос к ИИ
           prompt = f"""Ты — дежурный модератор репозитория ExpertSDR3.
-          Твоя задача — проверить, дублирует ли новая задача одну из ранее созданных.
+          Проверь, дублирует ли новая задача одну из существующих.
 
-          НОВАЯ ЗАДАЧА:
+          ЦЕЛЕВАЯ ЗАДАЧА:
           #{target_issue['number']}: {target_issue.get('title')}
           Описание:
           {target_issue.get('body', '')}
 
-          СПИСОК РАНЕЕ СОЗДАННЫХ ЗАДАЧ:
+          ДРУГИЕ ЗАДАЧИ:
           {candidates_text}
 
           ИНСТРУКЦИЯ:
-          - Если НОВАЯ ЗАДАЧА описывает ту же самую неисправность/проблему, что и одна из существующих, ответь строго в формате:
-          DUPLICATE: #НОМЕР (кратко объясни, почему это дубликат)
-          - Если это уникальная проблема и дубликатов нет, ответь строго одним словом:
+          - Если ЦЕЛЕВАЯ ЗАДАЧА описывает ту же аппаратную/программную неисправность, что и задача из списка, ответь строго в формате:
+          DUPLICATE: #НОМЕР (кратко опиши причину схожести)
+          - Если совпадений нет, ответь строго одним словом:
           UNIQUE
           """
 
@@ -110,7 +110,7 @@ jobs:
               "temperature": 0.1
           }
 
-          # Запрос во встроенный GitHub Models endpoint
+          # Запрос во встроенный GitHub Models API
           ai_res = requests.post(
               "https://models.inference.ai.azure.com/chat/completions",
               headers=ai_headers,
@@ -124,7 +124,7 @@ jobs:
           answer = ai_res.json()["choices"][0]["message"]["content"].strip()
           print(f"Ответ ИИ:\n{answer}")
 
-          # 4. Если обнаружен дубликат — комментируем и ставим метку
+          # 4. Если дубликат — публикуем комментарий и метку
           if "DUPLICATE:" in answer:
               comment_body = f"🤖 **AI Issue Deduplicator**\n\n{answer}\n\nПожалуйста, ознакомьтесь с обсуждением в указанном тикете."
               requests.post(
@@ -132,13 +132,12 @@ jobs:
                   headers=gh_headers,
                   json={"body": comment_body}
               )
-              # Вешаем метку duplicate
               requests.post(
                   f"https://api.github.com/repos/{repo}/issues/{target_num}/labels",
                   headers=gh_headers,
                   json={"labels": ["duplicate"]}
               )
-              print("Комментарий и метка успешно добавлены.")
+              print("Метка duplicate и комментарий добавлены.")
           else:
-              print("Дубликатов не найдено.")
+              print("Дубликатов не обнаружено.")
           EOF
