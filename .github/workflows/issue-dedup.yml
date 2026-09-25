@@ -23,9 +23,6 @@ jobs:
   deduplicate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -34,9 +31,123 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run Deduplication
+      - name: Check for duplicates
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           TARGET_ISSUE_NUM: ${{ github.event.issue.number || inputs.issue_number }}
-        run: python .github/scripts/dedup.py
+        run: |
+          python - << 'EOF'
+          import os
+          import sys
+          import requests
+
+          token = os.environ["GITHUB_TOKEN"]
+          repo = os.environ["REPO"]
+          target_num = os.environ.get("TARGET_ISSUE_NUM")
+
+          if not target_num:
+              print("Ошибка: Номер Issue не передан.")
+              sys.exit(1)
+
+          gh_headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json",
+              "User-Agent": "ExpertSDR3-Deduplicator-Action"
+          }
+
+          # 1. Получаем целевую задачу
+          issue_url = f"https://api.github.com/repos/{repo}/issues/{target_num}"
+          r = requests.get(issue_url, headers=gh_headers)
+          if r.status_code != 200:
+              print(f"Ошибка получения Issue #{target_num} ({r.status_code}): {r.text}")
+              sys.exit(1)
+
+          target_issue = r.json()
+          print(f"Проверяем задачу #{target_num}: {target_issue.get('title')}")
+
+          # 2. Получаем последние задачи для сопоставления
+          list_url = f"https://api.github.com/repos/{repo}/issues?state=all&per_page=50"
+          list_resp = requests.get(list_url, headers=gh_headers)
+          if list_resp.status_code != 200:
+              print(f"Ошибка получения списка задач ({list_resp.status_code}): {list_resp.text}")
+              sys.exit(1)
+
+          issues_list = list_resp.json()
+          candidates = []
+          for item in issues_list:
+              if str(item.get("number")) != str(target_num) and "pull_request" not in item:
+                  body_preview = (item.get("body") or "")[:250].replace("\n", " ")
+                  candidates.append(f"#{item['number']}: {item['title']} (Контекст: {body_preview})")
+
+          if not candidates:
+              print("Нет других задач для сравнения.")
+              sys.exit(0)
+
+          candidates_text = "\n".join(candidates)
+
+          # 3. Запрос к ИИ (GitHub Models)
+          prompt = f"""Ты — дежурный технический модератор репозитория ExpertSDR3.
+          Проверь, дублирует ли новая задача одну из существующих проблем.
+
+          ЦЕЛЕВАЯ ЗАДАЧА:
+          #{target_issue['number']}: {target_issue.get('title')}
+          Описание:
+          {target_issue.get('body', '')}
+
+          ДРУГИЕ ЗАДАЧИ:
+          {candidates_text}
+
+          ИНСТРУКЦИЯ:
+          - Если ЦЕЛЕВАЯ ЗАДАЧА описывает ту же проблему/баг, что и задача из списка, ответь строго в формате:
+          DUPLICATE: #НОМЕР (кратко опиши причину)
+          - Если совпадений нет, ответь строго:
+          UNIQUE
+          """
+
+          ai_headers = {
+              "Authorization": f"Bearer {token}",
+              "Content-Type": "application/json",
+              "User-Agent": "ExpertSDR3-Deduplicator-Action"
+          }
+          ai_payload = {
+              "model": "gpt-4o-mini",
+              "messages": [{"role": "user", "content": prompt}],
+              "temperature": 0.1
+          }
+
+          ai_res = requests.post(
+              "https://models.github.ai/inference/chat/completions",
+              headers=ai_headers,
+              json=ai_payload
+          )
+
+          if ai_res.status_code != 200:
+              print(f"Ошибка GitHub Models API ({ai_res.status_code}): {ai_res.text}")
+              sys.exit(1)
+
+          try:
+              data = ai_res.json()
+              answer = data["choices"][0]["message"]["content"].strip()
+              print(f"Ответ ИИ:\n{answer}")
+          except Exception as e:
+              print(f"Ошибка парсинга ответа модели ({e}): {ai_res.text}")
+              sys.exit(1)
+
+          # 4. Если дубликат найден
+          if "DUPLICATE:" in answer:
+              comment_body = f"🤖 **AI Issue Deduplicator**\n\n{answer}\n\nПожалуйста, ознакомьтесь с обсуждением в указанном тикете."
+              requests.post(
+                  f"https://api.github.com/repos/{repo}/issues/{target_num}/comments",
+                  headers=gh_headers,
+                  json={"body": comment_body}
+              )
+              requests.post(
+                  f"https://api.github.com/repos/{repo}/issues/{target_num}/labels",
+                  headers=gh_headers,
+                  json={"labels": ["duplicate"]}
+              )
+              print("Метка duplicate и комментарий добавлены.")
+          else:
+              print("Дубликатов не обнаружено.")
+          EOF
