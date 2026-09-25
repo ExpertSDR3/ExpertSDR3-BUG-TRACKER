@@ -60,7 +60,8 @@ jobs:
           gh_headers = {
               "Authorization": f"Bearer {gh_token}",
               "Accept": "application/vnd.github+json",
-              "User-Agent": "ExpertSDR3-Deduplicator"
+              "User-Agent": "ExpertSDR3-Deduplicator",
+              "X-GitHub-Api-Version": "2022-11-28"
           }
 
           # 1. Загружаем целевой тикет
@@ -118,7 +119,8 @@ jobs:
               "Authorization": f"Bearer {models_token}",
               "Content-Type": "application/json",
               "User-Agent": "ExpertSDR3-Deduplicator",
-              "Accept": "application/json"
+              "Accept": "application/json",
+              "X-GitHub-Api-Version": "2022-11-28"
           }
           ai_payload = {
               "model": "gpt-4o-mini",
@@ -128,42 +130,33 @@ jobs:
           }
 
           print("Отправка запроса в GitHub Models API...")
-          ai_res = requests.post(
-              "https://models.github.ai/inference/chat/completions",
-              headers=ai_headers,
-              json=ai_payload
-          )
+          url = "https://models.github.ai/inference/chat/completions"
+          ai_res = requests.post(url, headers=ai_headers, json=ai_payload)
+
+          if ai_res.text.strip() == "OK":
+              print("Получен ответ 'OK', пробуем эндпоинт api.github.com/models/chat/completions...")
+              url = "https://api.github.com/models/chat/completions"
+              ai_res = requests.post(url, headers=ai_headers, json=ai_payload)
+
+          print(f"Статус ответа: {ai_res.status_code}")
+          raw_text = ai_res.text.strip()
 
           if ai_res.status_code != 200:
-              print(f"Ошибка API GitHub Models ({ai_res.status_code}):\n{ai_res.text}")
+              print(f"Ошибка API GitHub Models ({ai_res.status_code}):\n{raw_text}")
               sys.exit(1)
 
-          raw_text = ai_res.text.strip()
-          answer = ""
+          if raw_text == "OK":
+              print("Сервер снова вернул OK. Токен не имеет доступа к моделям в рамках этой организации.")
+              sys.exit(1)
 
-          # Обработка возможного стрима или чистого JSON
-          if "data:" in raw_text:
-              for line in raw_text.splitlines():
-                  line = line.strip()
-                  if line.startswith("data:") and not line.endswith("[DONE]"):
-                      try:
-                          payload = json.loads(line[5:].strip())
-                          choice = payload.get("choices", [{}])[0]
-                          delta = choice.get("delta", {}).get("content", "")
-                          msg = choice.get("message", {}).get("content", "")
-                          answer += (delta or msg)
-                      except Exception:
-                          pass
-              answer = answer.strip()
-          else:
-              try:
-                  data = json.loads(raw_text)
-                  answer = data["choices"][0]["message"]["content"].strip()
-              except Exception as e:
-                  print(f"Ошибка парсинга. Сырой ответ сервера:\n>>>{raw_text}<<<")
-                  sys.exit(1)
-
-          print(f"Ответ модели:\n{answer}")
+          # Обработка ответа
+          try:
+              data = json.loads(raw_text)
+              answer = data["choices"][0]["message"]["content"].strip()
+              print(f"Ответ модели:\n{answer}")
+          except Exception as e:
+              print(f"Ошибка парсинга. Сырой ответ сервера:\n>>>{raw_text}<<<")
+              sys.exit(1)
 
           # 4. Если обнаружен дубликат — комментируем и вешаем метку
           if "DUPLICATE:" in answer:
