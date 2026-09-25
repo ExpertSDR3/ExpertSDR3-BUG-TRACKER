@@ -1,0 +1,107 @@
+name: "🐛 Bug Report"
+description: "Submit a bug report or crash issue for ExpertSDR3"
+title: "[Bug]: "
+labels: ["bug", "triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please provide detailed information below.
+        All fields marked with an asterisk (**\***) are required.
+
+  - type: checkboxes
+    id: pre-check
+    attributes:
+      label: "Prerequisites"
+      options:
+        - label: "I have searched open and closed issues to ensure this is not a duplicate."
+          required: true
+
+  - type: input
+    id: radio-info
+    attributes:
+      label: "Radio Model & Serial Number"
+      description: "Specify your transceiver model and its serial number (e.g., SunSDR2 DX, S/N: ...)"
+      placeholder: "e.g., SunSDR2 DX, S/N: EDX012345"
+    validations:
+      required: true
+
+  - type: input
+    id: software-firmware-version
+    attributes:
+      label: "ExpertSDR3 Version/Build & Transceiver Firmware"
+      description: "Specify the exact ExpertSDR3 release/build number and transceiver firmware version."
+      placeholder: "e.g., ExpertSDR3 v1.0.8 (build 2405), Firmware v72.8"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating System"
+      description: "Select your operating system platform"
+      options:
+        - "Ubuntu / Debian"
+        - "Fedora / Arch / Other Linux"
+        - "Windows 11"
+        - "Windows 10"
+        - "macOS"
+    validations:
+      required: true
+
+  - type: input
+    id: pc-specs
+    attributes:
+      label: "PC Specifications"
+      description: "Briefly specify CPU, RAM, GPU, and audio/network interface if relevant."
+      placeholder: "e.g., AMD Ryzen 7 5800X, 32GB RAM, RTX 3070, Gigabit Ethernet"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Bug Description"
+      description: "Provide as much detailed information about the error/issue as possible."
+      placeholder: "Describe what happened, error messages shown, unexpected behavior, etc."
+    validations:
+      required: true
+
+  - type: textarea
+    id: conditions
+    attributes:
+      label: "Operating Conditions & Environment"
+      description: "Describe the exact state and conditions when the error occurs (e.g., sample rate, DSP settings, mode CW/SSB/DIGI, PA enabled, network connection type)."
+      placeholder: "e.g., TX mode in CW, Sample rate 312 kHz, VAC enabled, TCI connection active..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "List the sequence of actions to reproduce the issue (if reproducible)."
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Crash Logs / Stack Trace / Debug Output"
+      description: "Paste relevant log files, console output, or stack traces."
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: "Screenshots / Additional Context"
+      description: "Attach screenshots, audio recordings, waterfall captures, or any other helpful details."
+    validations:
+      required: false
