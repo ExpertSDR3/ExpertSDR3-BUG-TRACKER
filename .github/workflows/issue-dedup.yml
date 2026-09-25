@@ -23,99 +23,122 @@ jobs:
   deduplicate:
     runs-on: ubuntu-latest
     steps:
-      - name: Deduplicate Issues with AI
-        uses: actions/github-script@v7
-        env:
-          TARGET_ISSUE: ${{ github.event.issue.number || inputs.issue_number }}
+      - name: Set up Python
+        uses: setup-python@v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const targetIssueNumber = parseInt(process.env.TARGET_ISSUE, 10);
-            if (!targetIssueNumber) {
-              core.setFailed("Номер задачи не передан.");
-              return;
-            }
+          python-version: '3.11'
 
-            // 1. Получаем целевую задачу
-            const { data: targetIssue } = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: targetIssueNumber,
-            });
+      - name: Install dependencies
+        run: pip install requests
 
-            console.log(`Проверка Issue #${targetIssue.number}: "${targetIssue.title}"`);
+      - name: Check for duplicates
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TARGET_ISSUE_NUM: ${{ github.event.issue.number || inputs.issue_number }}
+        run: |
+          python - << 'EOF'
+          import os
+          import sys
+          import requests
 
-            // 2. Получаем последние 50 задач репозитория для сравнения
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'all',
-              per_page: 50,
-            });
+          token = os.environ["GITHUB_TOKEN"]
+          repo = os.environ["REPO"]
+          target_num = os.environ.get("TARGET_ISSUE_NUM")
 
-            const candidateList = issues
-              .filter(i => i.number !== targetIssueNumber && !i.pull_request)
-              .map(i => `#${i.number}: ${i.title}\n${(i.body || '').substring(0, 300)}`)
-              .join('\n---\n');
+          if not target_num:
+              print("Номер Issue не задан.")
+              sys.exit(1)
 
-            if (!candidateList.trim()) {
-              console.log("Нет других задач для сравнения.");
-              return;
-            }
+          gh_headers = {
+              "Authorization": f"Bearer {token}",
+              "Accept": "application/vnd.github+json"
+          }
 
-            // 3. Формируем запрос к модели
-            const prompt = `Ты — система модерации баг-трекера.
-            Проанализируй новую задачу и сравни её со списком существующих.
-            
-            ЦЕЛЕВАЯ ЗАДАЧА:
-            #${targetIssue.number}: ${targetIssue.title}
-            ${targetIssue.body || ''}
-            
-            СПИСОК ДРУГИХ ЗАДАЧ:
-            ${candidateList}
-            
-            Если целевая задача дублирует (описывает ту же аппаратную/программную ошибку или проблему) одну или несколько существующих задач, выведи строго в таком формате:
-            DUPLICATE: #НОМЕР (краткая причина)
-            
-            Если дубликатов нет, ответь ровно:
-            UNIQUE`;
+          # 1. Получаем проверяемый Issue
+          issue_url = f"https://api.github.com/repos/{repo}/issues/{target_num}"
+          r = requests.get(issue_url, headers=gh_headers)
+          if r.status_code != 200:
+              print(f"Не удалось получить Issue #{target_num}: {r.text}")
+              sys.exit(1)
 
-            // Запрос через GitHub Models REST endpoint
-            const fetch = (await import('node-fetch')).default;
-            const res = await fetch("https://models.inference.ai.azure.com/chat/completions", {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${{ secrets.GITHUB_TOKEN }}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                model: "gpt-4o-mini",
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.1
-              })
-            });
+          target_issue = r.json()
+          print(f"Анализируем Issue #{target_num}: {target_issue.get('title')}")
 
-            const completion = await res.json();
-            const reply = completion.choices?.[0]?.message?.content?.trim();
-            console.log("Ответ модели:", reply);
+          # 2. Получаем список последних 50 задач для сравнения
+          list_url = f"https://api.github.com/repos/{repo}/issues?state=all&per_page=50"
+          issues_list = requests.get(list_url, headers=gh_headers).json()
 
-            // 4. Если обнаружен дубликат — комментируем и вешаем метку
-            if (reply && reply.includes("DUPLICATE:")) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: targetIssueNumber,
-                body: `🤖 **AI Deduplicator:**\n\n${reply}\n\nПожалуйста, ознакомьтесь с указанной задачей.`
-              });
+          candidates = []
+          for item in issues_list:
+              if str(item["number"]) != str(target_num) and "pull_request" not in item:
+                  body_preview = (item.get("body") or "")[:300].replace("\n", " ")
+                  candidates.append(f"#{item['number']}: {item['title']} | Контекст: {body_preview}")
 
-              try {
-                await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: targetIssueNumber,
-                  labels: ['duplicate']
-                });
-              } catch (e) {
-                console.log("Не удалось добавить метку duplicate (возможно, метка отсутствует):", e.message);
-              }
-            }
+          if not candidates:
+              print("Нет других задач для сравнения.")
+              sys.exit(0)
+
+          candidates_text = "\n".join(candidates)
+
+          # 3. Формируем запрос к ИИ
+          prompt = f"""Ты — дежурный модератор репозитория ExpertSDR3.
+          Твоя задача — проверить, дублирует ли новая задача одну из ранее созданных.
+
+          НОВАЯ ЗАДАЧА:
+          #{target_issue['number']}: {target_issue.get('title')}
+          Описание:
+          {target_issue.get('body', '')}
+
+          СПИСОК РАНЕЕ СОЗДАННЫХ ЗАДАЧ:
+          {candidates_text}
+
+          ИНСТРУКЦИЯ:
+          - Если НОВАЯ ЗАДАЧА описывает ту же самую неисправность/проблему, что и одна из существующих, ответь строго в формате:
+          DUPLICATE: #НОМЕР (кратко объясни, почему это дубликат)
+          - Если это уникальная проблема и дубликатов нет, ответь строго одним словом:
+          UNIQUE
+          """
+
+          ai_headers = {
+              "Authorization": f"Bearer {token}",
+              "Content-Type": "application/json"
+          }
+          ai_payload = {
+              "model": "gpt-4o-mini",
+              "messages": [{"role": "user", "content": prompt}],
+              "temperature": 0.1
+          }
+
+          # Запрос во встроенный GitHub Models endpoint
+          ai_res = requests.post(
+              "https://models.inference.ai.azure.com/chat/completions",
+              headers=ai_headers,
+              json=ai_payload
+          )
+
+          if ai_res.status_code != 200:
+              print(f"Ошибка API GitHub Models ({ai_res.status_code}): {ai_res.text}")
+              sys.exit(1)
+
+          answer = ai_res.json()["choices"][0]["message"]["content"].strip()
+          print(f"Ответ ИИ:\n{answer}")
+
+          # 4. Если обнаружен дубликат — комментируем и ставим метку
+          if "DUPLICATE:" in answer:
+              comment_body = f"🤖 **AI Issue Deduplicator**\n\n{answer}\n\nПожалуйста, ознакомьтесь с обсуждением в указанном тикете."
+              requests.post(
+                  f"https://api.github.com/repos/{repo}/issues/{target_num}/comments",
+                  headers=gh_headers,
+                  json={"body": comment_body}
+              )
+              # Вешаем метку duplicate
+              requests.post(
+                  f"https://api.github.com/repos/{repo}/issues/{target_num}/labels",
+                  headers=gh_headers,
+                  json={"labels": ["duplicate"]}
+              )
+              print("Комментарий и метка успешно добавлены.")
+          else:
+              print("Дубликатов не найдено.")
+          EOF
