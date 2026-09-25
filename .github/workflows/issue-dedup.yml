@@ -11,7 +11,6 @@ on:
         type: string
 
 permissions:
-  models: read
   issues: write
   contents: read
 
@@ -34,6 +33,7 @@ jobs:
       - name: Check for duplicates
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           REPO: ${{ github.repository }}
           TARGET_ISSUE_NUM: ${{ github.event.issue.number || inputs.issue_number }}
         run: |
@@ -42,16 +42,17 @@ jobs:
           import sys
           import requests
 
-          token = os.environ["GITHUB_TOKEN"]
+          gh_token = os.environ["GITHUB_TOKEN"]
+          gemini_key = os.environ.get("GEMINI_API_KEY")
           repo = os.environ["REPO"]
           target_num = os.environ.get("TARGET_ISSUE_NUM")
 
-          if not target_num:
-              print("Ошибка: Номер Issue не задан.")
+          if not gemini_key:
+              print("Ошибка: Секрет GEMINI_API_KEY не задан в настройках репозитория.")
               sys.exit(1)
 
           gh_headers = {
-              "Authorization": f"Bearer {token}",
+              "Authorization": f"Bearer {gh_token}",
               "Accept": "application/vnd.github+json"
           }
 
@@ -65,7 +66,7 @@ jobs:
           target_issue = r.json()
           print(f"Проверяем задачу #{target_num}: {target_issue.get('title')}")
 
-          # 2. Получаем список последних 50 задач репозитория
+          # 2. Получаем последние 50 задач репозитория
           list_url = f"https://api.github.com/repos/{repo}/issues?state=all&per_page=50"
           issues_list = requests.get(list_url, headers=gh_headers).json()
 
@@ -82,8 +83,8 @@ jobs:
           candidates_text = "\n".join(candidates)
 
           # 3. Формируем запрос к ИИ
-          prompt = f"""Ты — дежурный модератор репозитория ExpertSDR3.
-          Проверь, дублирует ли новая задача одну из существующих.
+          prompt = f"""Ты — дежурный технический модератор репозитория ExpertSDR3.
+          Проверь, дублирует ли новая задача одну из существующих проблем.
 
           ЦЕЛЕВАЯ ЗАДАЧА:
           #{target_issue['number']}: {target_issue.get('title')}
@@ -100,31 +101,23 @@ jobs:
           UNIQUE
           """
 
-          ai_headers = {
-              "Authorization": f"Bearer {token}",
-              "Content-Type": "application/json"
-          }
+          gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
           ai_payload = {
-              "model": "openai/gpt-4o-mini",
-              "messages": [{"role": "user", "content": prompt}],
-              "temperature": 0.1
+              "contents": [{
+                  "parts": [{"text": prompt}]
+              }]
           }
 
-          # Запрос в актуальный рабочий эндпоинт GitHub Models
-          ai_res = requests.post(
-              "https://models.github.ai/inference/chat/completions",
-              headers=ai_headers,
-              json=ai_payload
-          )
-
+          ai_res = requests.post(gemini_url, json=ai_payload)
           if ai_res.status_code != 200:
-              print(f"Ошибка API GitHub Models ({ai_res.status_code}): {ai_res.text}")
+              print(f"Ошибка Gemini API ({ai_res.status_code}): {ai_res.text}")
               sys.exit(1)
 
-          answer = ai_res.json()["choices"][0]["message"]["content"].strip()
+          res_data = ai_res.json()
+          answer = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
           print(f"Ответ ИИ:\n{answer}")
 
-          # 4. Если дубликат — публикуем комментарий и метку
+          # 4. Если дубликат — комментируем и ставим метку
           if "DUPLICATE:" in answer:
               comment_body = f"🤖 **AI Issue Deduplicator**\n\n{answer}\n\nПожалуйста, ознакомьтесь с обсуждением в указанном тикете."
               requests.post(
@@ -137,7 +130,7 @@ jobs:
                   headers=gh_headers,
                   json={"labels": ["duplicate"]}
               )
-              print("Метка duplicate и комментарий добавлены.")
+              print("Метка duplicate и комментарий успешно добавлены.")
           else:
               print("Дубликатов не обнаружено.")
           EOF
