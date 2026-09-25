@@ -47,16 +47,16 @@ jobs:
           target_num = os.environ.get("TARGET_ISSUE_NUM")
 
           if not target_num:
-              print("Ошибка: Номер Issue не передан.")
+              print("Ошибка: Номер Issue не задан.")
               sys.exit(1)
 
           gh_headers = {
               "Authorization": f"Bearer {token}",
               "Accept": "application/vnd.github+json",
-              "User-Agent": "ExpertSDR3-Deduplicator-Action"
+              "User-Agent": "GitHub-Action-Issue-Dedup"
           }
 
-          # 1. Получаем целевую задачу
+          # 1. Загружаем проверяемую задачу
           issue_url = f"https://api.github.com/repos/{repo}/issues/{target_num}"
           r = requests.get(issue_url, headers=gh_headers)
           if r.status_code != 200:
@@ -66,14 +66,14 @@ jobs:
           target_issue = r.json()
           print(f"Проверяем задачу #{target_num}: {target_issue.get('title')}")
 
-          # 2. Получаем последние задачи для сопоставления
+          # 2. Загружаем задачи для сопоставления
           list_url = f"https://api.github.com/repos/{repo}/issues?state=all&per_page=50"
-          list_resp = requests.get(list_url, headers=gh_headers)
-          if list_resp.status_code != 200:
-              print(f"Ошибка получения списка задач ({list_resp.status_code}): {list_resp.text}")
+          list_res = requests.get(list_url, headers=gh_headers)
+          if list_res.status_code != 200:
+              print(f"Ошибка получения списка задач ({list_res.status_code}): {list_res.text}")
               sys.exit(1)
 
-          issues_list = list_resp.json()
+          issues_list = list_res.json()
           candidates = []
           for item in issues_list:
               if str(item.get("number")) != str(target_num) and "pull_request" not in item:
@@ -86,8 +86,8 @@ jobs:
 
           candidates_text = "\n".join(candidates)
 
-          # 3. Запрос к ИИ (GitHub Models)
-          prompt = f"""Ты — дежурный технический модератор репозитория ExpertSDR3.
+          # 3. Формируем запрос к ИИ
+          prompt = f"""Ты — технический модератор репозитория ExpertSDR3.
           Проверь, дублирует ли новая задача одну из существующих проблем.
 
           ЦЕЛЕВАЯ ЗАДАЧА:
@@ -99,8 +99,8 @@ jobs:
           {candidates_text}
 
           ИНСТРУКЦИЯ:
-          - Если ЦЕЛЕВАЯ ЗАДАЧА описывает ту же проблему/баг, что и задача из списка, ответь строго в формате:
-          DUPLICATE: #НОМЕР (кратко опиши причину)
+          - Если ЦЕЛЕВАЯ ЗАДАЧА описывает ту же аппаратную/программную неисправность, ответь строго в формате:
+          DUPLICATE: #НОМЕР (кратко укажи причину)
           - Если совпадений нет, ответь строго:
           UNIQUE
           """
@@ -108,7 +108,7 @@ jobs:
           ai_headers = {
               "Authorization": f"Bearer {token}",
               "Content-Type": "application/json",
-              "User-Agent": "ExpertSDR3-Deduplicator-Action"
+              "User-Agent": "GitHub-Action-Issue-Dedup"
           }
           ai_payload = {
               "model": "gpt-4o-mini",
@@ -123,18 +123,14 @@ jobs:
           )
 
           if ai_res.status_code != 200:
-              print(f"Ошибка GitHub Models API ({ai_res.status_code}): {ai_res.text}")
+              print(f"Ошибка API GitHub Models ({ai_res.status_code}): {ai_res.text}")
               sys.exit(1)
 
-          try:
-              data = ai_res.json()
-              answer = data["choices"][0]["message"]["content"].strip()
-              print(f"Ответ ИИ:\n{answer}")
-          except Exception as e:
-              print(f"Ошибка парсинга ответа модели ({e}): {ai_res.text}")
-              sys.exit(1)
+          data = ai_res.json()
+          answer = data["choices"][0]["message"]["content"].strip()
+          print(f"Ответ ИИ:\n{answer}")
 
-          # 4. Если дубликат найден
+          # 4. Обработка вердикта
           if "DUPLICATE:" in answer:
               comment_body = f"🤖 **AI Issue Deduplicator**\n\n{answer}\n\nПожалуйста, ознакомьтесь с обсуждением в указанном тикете."
               requests.post(
